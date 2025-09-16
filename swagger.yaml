@@ -1,0 +1,448 @@
+openapi: 3.0.0
+info:
+  title: Digital Wallet API
+  version: 1.0.0
+  description: API for digital wallet operations (deposit, withdraw, transfer, balances, transactions, admin reporting, etc.)
+
+servers:
+  - url: http://localhost:3000/api/wallet
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Wallet:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            username:
+              type: string
+            email:
+              type: string
+        balances:
+          type: object
+          additionalProperties:
+            type: number
+
+    Transaction:
+      type: object
+      properties:
+        user:
+          type: string
+        type:
+          type: string
+        amount:
+          type: number
+        currency:
+          type: string
+        toUser:
+          type: string
+        flagged:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+security:
+  - bearerAuth: []
+
+paths:
+  /deposit:
+    post:
+      summary: Deposit funds into wallet
+      tags:
+        - Wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 1000
+                currency:
+                  type: string
+                  example: INR
+      responses:
+        '200':
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '400':
+          description: Invalid input
+        '401':
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /withdraw:
+    post:
+      summary: Withdraw funds from wallet
+      tags:
+        - Wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 500
+                currency:
+                  type: string
+                  example: USD
+      responses:
+        '200':
+          description: Withdraw successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '400':
+          description: Invalid input
+        '401':
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /transfer:
+    post:
+      summary: Transfer funds to another user
+      tags:
+        - Wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                toUserId:
+                  type: string
+                  example: 665c1e8c2f4e8f001f6e9b3b
+                amount:
+                  type: number
+                  example: 100
+                currency:
+                  type: string
+                  example: EUR
+      responses:
+        '200':
+          description: Transfer successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Invalid input
+        '401':
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /transactions:
+    get:
+      summary: Get transaction history for the logged-in user
+      tags:
+        - Wallet
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: Page number for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          description: Number of transactions per page
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  pages:
+                    type: integer
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+        '401':
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /balance:
+    get:
+      summary: Get wallet balances by currency for the logged-in user
+      tags:
+        - Wallet
+      responses:
+        '200':
+          description: Wallet balances
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '401':
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /all-balances:
+    get:
+      summary: Get balances for all supported currencies (zero if not present)
+      tags:
+        - Wallet
+      responses:
+        '200':
+          description: All balances
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balances:
+                    type: object
+                    additionalProperties:
+                      type: number
+        '401':
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /details:
+    get:
+      summary: Get full wallet details
+      tags:
+        - Wallet
+      responses:
+        '200':
+          description: Wallet details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '401':
+          description: Unauthorized
+      security:
+        - bearerAuth: []
+
+  /admin/flagged-transactions:
+    get:
+      summary: Get all flagged transactions (admin only)
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: List of flagged transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
+
+  /admin/total-balances:
+    get:
+      summary: Get total balances for all users (admin only)
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: Total balances by currency
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalBalances:
+                    type: object
+                    additionalProperties:
+                      type: number
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
+
+  /admin/top-users-by-balance:
+    get:
+      summary: Get top users by total balance (admin only)
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: Top users by balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  topUsers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user:
+                          type: object
+                          properties:
+                            username:
+                              type: string
+                            email:
+                              type: string
+                        totalBalance:
+                          type: number
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
+
+  /admin/top-users-by-transactions:
+    get:
+      summary: Get top users by transaction count (admin only)
+      tags:
+        - Admin
+      responses:
+        '200':
+          description: Top users by transaction count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  topUsers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user:
+                          type: string
+                        email:
+                          type: string
+                        transactionCount:
+                          type: integer
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
+    /admin/users/{id}:
+    delete:
+      summary: Soft delete a user (admin only)
+      tags:
+        - Admin
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: User ID
+      responses:
+        '200':
+          description: User soft deleted
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
+
+  /admin/users/{id}/restore:
+    patch:
+      summary: Restore a soft-deleted user (admin only)
+      tags:
+        - Admin
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: User ID
+      responses:
+        '200':
+          description: User restored
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
+
+  /admin/transactions/{id}:
+    delete:
+      summary: Soft delete a transaction (admin only)
+      tags:
+        - Admin
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Transaction ID
+      responses:
+        '200':
+          description: Transaction soft deleted
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
+
+  /admin/transactions/{id}/restore:
+    patch:
+      summary: Restore a soft-deleted transaction (admin only)
+      tags:
+        - Admin
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Transaction ID
+      responses:
+        '200':
+          description: Transaction restored
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
